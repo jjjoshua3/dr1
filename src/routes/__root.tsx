@@ -14,6 +14,7 @@ export const Route = createRootRoute({
       { name: "author", content: "Daan Roosenbrand" },
       { name: "robots", content: "index, follow" },
       { name: "theme-color", content: "#080706" },
+      { name: "apple-mobile-web-app-title", content: "Daan Roosenbrand" },
       { property: "og:title", content: PAGE_TITLE },
       { property: "og:description", content: PAGE_DESCRIPTION },
       { property: "og:type", content: "website" },
@@ -29,6 +30,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "canonical", href: SITE_URL },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "apple-touch-icon", href: "/favicon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
