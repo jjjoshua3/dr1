@@ -13,6 +13,28 @@ import {
 import { Saxophone } from "@/components/saxophone";
 
 const BAKER = VIDEOS[0];
+const lenisRef: { current: LenisInstance | null } = { current: null };
+
+type LenisInstance = {
+  raf: (time: number) => void;
+  on: (event: "scroll", cb: () => void) => void;
+  scrollTo: (target: HTMLElement | string, opts?: { offset?: number }) => void;
+  destroy: () => void;
+};
+type LenisCtor = new (options?: { lerp?: number; smoothWheel?: boolean }) => LenisInstance;
+
+function waitForLenis(timeout = 2800) {
+  return new Promise<LenisCtor | null>((resolve) => {
+    const started = Date.now();
+    const check = () => {
+      const Ctor = (window as Window & { Lenis?: LenisCtor }).Lenis;
+      if (Ctor) resolve(Ctor);
+      else if (Date.now() - started > timeout) resolve(null);
+      else window.setTimeout(check, 40);
+    };
+    check();
+  });
+}
 
 export function Stage() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,6 +55,7 @@ export function Stage() {
       timer?: number;
       ctx?: { revert: () => void };
       tl?: { kill: () => void };
+      stopLenis?: () => void;
     } = {};
     let dead = false;
 
@@ -41,12 +64,45 @@ export function Stage() {
     }, 5600);
 
     void (async () => {
-      const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([
+      const [{ default: gsap }, { ScrollTrigger }, LenisCtor] = await Promise.all([
         import("gsap"),
         import("gsap/ScrollTrigger"),
+        waitForLenis(),
       ]);
       if (dead || !rootRef.current) return;
       gsap.registerPlugin(ScrollTrigger);
+
+      if (LenisCtor) {
+        const lenis = new LenisCtor({ lerp: 0.1, smoothWheel: true });
+        lenisRef.current = lenis;
+        lenis.on("scroll", ScrollTrigger.update);
+        const raf = (time: number) => {
+          lenis.raf(time * 1000);
+        };
+        gsap.ticker.add(raf);
+        gsap.ticker.lagSmoothing(0);
+        const onAnchor = (event: globalThis.MouseEvent) => {
+          const link = (event.target as HTMLElement | null)?.closest?.("a[href^='#']");
+          if (!(link instanceof HTMLAnchorElement)) return;
+          const id = link.getAttribute("href")?.slice(1);
+          if (!id) return;
+          const el = document.getElementById(id);
+          if (!el) return;
+          event.preventDefault();
+          lenis.scrollTo(el, { offset: id === "top" ? 0 : -12 });
+        };
+        document.addEventListener("click", onAnchor);
+        bag.stopLenis = () => {
+          document.removeEventListener("click", onAnchor);
+          gsap.ticker.remove(raf);
+          lenis.destroy();
+          if (lenisRef.current === lenis) lenisRef.current = null;
+        };
+        if (dead) {
+          bag.stopLenis();
+          return;
+        }
+      }
 
       bag.ctx = gsap.context(() => {
         const root = rootRef.current;
@@ -144,6 +200,8 @@ export function Stage() {
       if (bag.timer) window.clearTimeout(bag.timer);
       bag.tl?.kill();
       bag.ctx?.revert();
+      bag.stopLenis?.();
+      lenisRef.current = null;
     };
   }, []);
 
@@ -170,7 +228,10 @@ export function Stage() {
   }
 
   function toBook() {
-    document.getElementById("boek")?.scrollIntoView({ behavior: "smooth" });
+    const target = document.getElementById("boek");
+    if (!target) return;
+    if (lenisRef.current) lenisRef.current.scrollTo(target, { offset: -12 });
+    else target.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
@@ -181,7 +242,7 @@ export function Stage() {
       <Cursor />
       <div className="grain" aria-hidden="true" />
       {booted ? null : (
-        <div className="pre" data-preloader>
+        <div className="pre" data-preloader aria-hidden="true">
           <div className="curtain curtain-l" data-curtain="l" />
           <div className="curtain curtain-r" data-curtain="r" />
           <div className="pre-ui" data-pre-ui>
@@ -203,10 +264,16 @@ export function Stage() {
       )}
 
       <header className="nav">
-        <div className="brand">
+        <a className="brand" href="#top">
           <span className="brand-name">Daan Roosenbrand</span>
           <span className="brand-meta">Saxofoon · Klarinet · Directie</span>
-        </div>
+        </a>
+        <nav className="nav-links" aria-label="Hoofdnavigatie">
+          <a href="#verhaal">Verhaal</a>
+          <a href="#podium">Podium</a>
+          <a href="#meesterschap">Meesterschap</a>
+          <a href="#boek">Contact</a>
+        </nav>
         <Magnetic className="book" onClick={toBook}>
           <span className="book-full">Boek Daan / Contact</span>
           <span className="book-short">Boek Daan</span>
@@ -219,6 +286,7 @@ export function Stage() {
           <div className="hero-copy">
             <p className="eyebrow">01 — Het geluid van Rotterdam</p>
             <h1 id="hero-title" className="hero-title">
+              <span className="seo-line">Saxofonist Rotterdam</span>
               <span className="it">Adem.</span>
               <span className="off">Koper.</span>
               <span className="it">Ziel.</span>
@@ -229,7 +297,8 @@ export function Stage() {
               Roosenbrand
             </p>
             <p className="hero-sub">
-              Saxofonist, Klarinettist, Docent & Dirigent — Geboren, getogen en gevormd in Rotterdam.
+              Saxofonist, klarinettist, docent en dirigent. Geboren, getogen en gevormd in Rotterdam — van Sax
+              & DJ tot bigband.
             </p>
             <p className="scroll-hint">
               <i />
@@ -243,6 +312,8 @@ export function Stage() {
                 alt="Daan Roosenbrand speelt saxofoon in blauw podiumlicht."
                 width={960}
                 height={960}
+                fetchPriority="high"
+                decoding="async"
               />
               <span className="vignette" />
             </div>
@@ -252,6 +323,8 @@ export function Stage() {
                 alt="Daan Roosenbrand met saxofoon op een warm verlicht podium."
                 width={1356}
                 height={1370}
+                loading="lazy"
+                decoding="async"
               />
               <span className="vignette" />
             </div>
@@ -259,6 +332,7 @@ export function Stage() {
               type="button"
               className="listen"
               data-cursor="luister"
+              aria-label="Speel Baker Street af, saxofoonsolo van Daan Roosenbrand"
               onClick={(e) => openVideo(BAKER, e.currentTarget)}
             >
               <span className="meter" aria-hidden="true">
@@ -279,14 +353,17 @@ export function Stage() {
             <div className="story-sticky">
               <p className="eyebrow">02 — Biografie</p>
               <h2 id="story-title" className="story-kicker">
+                <span className="seo-line">Codarts-saxofonist</span>
                 Een Rotterdammer aan het mondstuk.
               </h2>
               <div className="story-shot">
                 <img
                   src="/photos/portrait.jpg"
-                  alt="Portret van Daan Roosenbrand."
+                  alt="Portret van saxofonist Daan Roosenbrand."
                   width={400}
                   height={400}
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             </div>
@@ -295,9 +372,9 @@ export function Stage() {
                 <h3>De rasmuzikant</h3>
                 <p className="story-p">
                   Daan Roosenbrand <AgeBadge /> is een échte Rotterdammer en een getalenteerde{" "}
-                  <em>saxofonist én klarinettist</em>. Met een diepe voorliefde voor lichte muziek en een
-                  diploma van het prestigieuze conservatorium Codarts in Rotterdam op zak, heeft hij een
-                  veelzijdige carrière opgebouwd waarin hij moeiteloos schakelt tussen genres.
+                  <em>saxofonist én klarinettist</em>. Als Codarts-saxofonist, met een diepe voorliefde voor
+                  lichte muziek en een diploma van het conservatorium Codarts in Rotterdam, schakelt hij
+                  moeiteloos tussen genres.
                 </p>
               </article>
               <article className="chapter">
@@ -306,8 +383,8 @@ export function Stage() {
                   Van bigbands en symfonische poporkesten tot dampende feesttenten en een uitverkocht
                   Rotterdam Ahoy. Daan was een gewaardeerd lid van de Dave Warmerdam Band, speelt de sterren
                   van de hemel bij Night at the Jukebox én maakt momenteel deel uit van de energieke coverband
-                  IMPAKT uit Roosendaal. Daarnaast treedt hij regelmatig op met verschillende DJ's, waarbij
-                  hij zijn saxofoon in een opwindende, dynamische club- en eventcontext presenteert.
+                  IMPAKT uit Roosendaal. Daarnaast staat hij regelmatig als Sax & DJ naast verschillende
+                  DJ's, met de saxofoon in een club- en eventcontext.
                 </p>
               </article>
               <blockquote className="pull">
@@ -317,9 +394,9 @@ export function Stage() {
               <article className="chapter">
                 <h3>Inspirator voor de toekomst</h3>
                 <p className="story-p">
-                  Zijn toewijding stopt niet bij het podium. Als bevlogen docent en dirigent deelt hij zijn
-                  kennis en passie met jong en oud, waarbij het beleven van plezier aan muziek altijd centraal
-                  staat.
+                  Zijn toewijding stopt niet bij het podium. Als bigband-dirigent in Delft geeft hij leiding
+                  aan Let's Swing Delft. Daarnaast geeft hij saxofoonles in Papendrecht bij Excelsior en
+                  saxofoonles in Oud Gastel bij Gastels Fanfare. Spelplezier staat voorop, voor jong en oud.
                 </p>
               </article>
             </div>
@@ -334,6 +411,8 @@ export function Stage() {
                 alt="Daan Roosenbrand tijdens een cluboptreden, groen en rood licht."
                 width={1110}
                 height={1109}
+                loading="lazy"
+                decoding="async"
               />
               <span className="vignette" />
             </div>
@@ -346,6 +425,8 @@ export function Stage() {
                 alt="Daan Roosenbrand met saxofoon op een paars verlicht podium."
                 width={1066}
                 height={1066}
+                loading="lazy"
+                decoding="async"
               />
               <span className="vignette" />
             </div>
@@ -357,10 +438,12 @@ export function Stage() {
           <div className="sec-head">
             <p className="eyebrow">03 — Virtual listening room</p>
             <h2 id="vault-title" className="sec-title">
+              <span className="seo-line">Saxofonist boeken</span>
               Live on Stage <em>& In Session</em>
             </h2>
             <p className="sec-lead">
-              Negen producties. Geen muur van spelers — je opent de zaal pas als je wilt luisteren.
+              Negen producties van een saxofonist uit Rotterdam. Sax & DJ, solo of met band — je opent de
+              zaal pas als je wilt luisteren.
             </p>
           </div>
           <div className="filters" role="tablist" aria-label="Filter optredens">
@@ -370,6 +453,7 @@ export function Stage() {
                 type="button"
                 role="tab"
                 aria-selected={filter === f.id}
+                aria-label={`Filter optredens: ${f.label}`}
                 className={filter === f.id ? "filter is-on" : "filter"}
                 onClick={() => setFilter(f.id)}
               >
@@ -384,10 +468,11 @@ export function Stage() {
                 type="button"
                 className="feature-hit"
                 data-cursor="luister"
+                aria-label={`Speel af: ${lead.title}`}
                 onClick={(e) => openVideo(lead, e.currentTarget)}
               >
                 <span className="thumb">
-                  <Thumb id={lead.id} alt="" />
+                  <Thumb id={lead.id} alt={lead.alt} />
                   <span className="vignette" />
                   <span className="play" data-cursor="speel" aria-hidden="true">
                     <PlayIcon />
@@ -409,10 +494,11 @@ export function Stage() {
                   type="button"
                   className="row-hit"
                   data-cursor="luister"
+                  aria-label={`Speel af: ${video.title}`}
                   onClick={(e) => openVideo(video, e.currentTarget)}
                 >
                   <span className="thumb">
-                    <Thumb id={video.id} alt="" />
+                    <Thumb id={video.id} alt={video.alt} />
                     <span className="vignette" />
                     <span className="play" data-cursor="speel" aria-hidden="true">
                       <PlayIcon />
@@ -425,7 +511,13 @@ export function Stage() {
                   </span>
                 </button>
                 {video.external ? (
-                  <a className="ext" href={video.external} target="_blank" rel="noreferrer">
+                  <a
+                    className="ext"
+                    href={video.external}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Website van ${video.title}`}
+                  >
                     Naar de site
                   </a>
                 ) : null}
@@ -457,10 +549,12 @@ export function Stage() {
           <div className="sec-head">
             <p className="eyebrow">04 — Directie, educatie & meesterschap</p>
             <h2 id="master-title" className="sec-title">
+              <span className="seo-line">Bigband-dirigent Delft</span>
               De stok, de les, <em>het vak.</em>
             </h2>
             <p className="sec-lead">
-              Naast het solo-werk: muzikale leiding, saxofoonles en de lijn van Codarts naar de repetitiezaal.
+              Naast het solo-werk: bigband-dirigent in Delft, saxofoonles in Papendrecht, saxofoonles in Oud
+              Gastel, en de lijn van Codarts naar de repetitiezaal.
             </p>
           </div>
           <div className="tl">
@@ -486,7 +580,7 @@ export function Stage() {
       </main>
 
       <footer className="colophon">
-        <span>Daan Roosenbrand</span>
+        <span>© {new Date().getFullYear()} Daan Roosenbrand</span>
         <span>Rotterdam</span>
         <span>Saxofoon · Klarinet · Directie</span>
         <span className="credit">
@@ -550,7 +644,16 @@ function PlayIcon() {
 }
 
 function Thumb({ id, alt }: { id: string; alt: string }) {
-  return <img src={`/thumbs/${id}.jpg`} alt={alt} />;
+  return (
+    <img
+      src={`/thumbs/${id}.jpg`}
+      alt={alt}
+      width={1280}
+      height={720}
+      loading="lazy"
+      decoding="async"
+    />
+  );
 }
 
 function Magnetic({
@@ -707,7 +810,8 @@ function Booking() {
             Zullen we samen <em>muziek maken?</em>
           </h2>
           <p className="sec-lead">
-            Solo, band, les of directie. Kies wat je zoekt — daarna de rest. Daan antwoordt persoonlijk.
+            Saxofonist boeken voor solo, Sax & DJ, band, klarinet of directie. Kies wat je zoekt — Daan
+            antwoordt persoonlijk.
           </p>
         </div>
 

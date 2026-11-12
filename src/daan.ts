@@ -16,6 +16,7 @@ export type Video = {
   id: string;
   title: string;
   label: string;
+  alt: string;
   tags: Tag[];
   external?: string;
 };
@@ -25,30 +26,35 @@ export const VIDEOS: Video[] = [
     id: "kKDFos-CEd8",
     title: "Excelsior & Daan Roosenbrand — Baker Street (Live)",
     label: "Iconische Saxofoon Solo",
+    alt: "Daan Roosenbrand speelt saxofoonsolo in Baker Street live met Excelsior Papendrecht",
     tags: ["excelsior", "solo"],
   },
   {
     id: "WLPDBI1BV6g",
     title: "Excelsior & Daan Roosenbrand — Against All Odds (Live)",
     label: "Live Ballad Solo",
+    alt: "Daan Roosenbrand speelt een live saxofoonsolo op Against All Odds met Excelsior Papendrecht",
     tags: ["excelsior", "solo"],
   },
   {
     id: "WjrbjayKkLQ",
     title: "Nick Nicolai — It's A Man's World (Ranking The Talent)",
     label: "TV Optreden / Sessie Saxofonist",
+    alt: "Daan Roosenbrand als sessiesaxofonist tijdens It's A Man's World bij Ranking The Talent",
     tags: ["solo"],
   },
   {
     id: "Mf3JzKaa7D8",
     title: "Feest- en Cantusband Bracchus — Live in Rotterdam Ahoy (Eurekaweek 2019)",
     label: "Groot Podium / Ahoy",
+    alt: "Daan Roosenbrand met Feest- en Cantusband Bracchus live in Rotterdam Ahoy tijdens de Eurekaweek 2019",
     tags: ["bands"],
   },
   {
     id: "JUqgIJMsIZc",
     title: "Night at the Jukebox — Band Showcase (Short)",
     label: "Huidige Band",
+    alt: "Daan Roosenbrand met Night at the Jukebox tijdens een bandshowcase",
     tags: ["bands"],
     external: "https://www.nightatthejukebox.nl/",
   },
@@ -56,24 +62,28 @@ export const VIDEOS: Video[] = [
     id: "rpkXoRAOxDU",
     title: "Codarts Pop Orchestra — Licht en Donker (Froukje)",
     label: "Codarts Rotterdam",
+    alt: "Daan Roosenbrand als Codarts-saxofonist met het Pop Orchestra in Licht en Donker van Froukje",
     tags: ["codarts"],
   },
   {
     id: "gVm_NMxlTmU",
     title: "Codarts Pop Orchestra — Hold Back (Margi Sinniah)",
     label: "Codarts Rotterdam",
+    alt: "Daan Roosenbrand speelt saxofoon met het Codarts Pop Orchestra in Hold Back",
     tags: ["codarts"],
   },
   {
     id: "bGFwhE3EVrA",
     title: "Daan Roosenbrand — Have Yourself A Merry Little Christmas",
     label: "Intieme Sessie",
+    alt: "Daan Roosenbrand speelt Have Yourself A Merry Little Christmas op saxofoon",
     tags: ["solo"],
   },
   {
     id: "22HLcpeJl3k",
     title: "Excelsior Papendrecht — Crooner's Serenade",
-    label: "Uit het Archief (9 jaar geleden)",
+    label: "Uit het Archief • 2015",
+    alt: "Archiefopname uit 2015: Daan Roosenbrand speelt Crooner's Serenade met Excelsior Papendrecht",
     tags: ["excelsior"],
   },
 ];
