@@ -1,8 +1,24 @@
-/**
- * LEEFTIJD — vervang "[XX]" door het getal, bijvoorbeeld "28".
- * De badge in de biografie leest alleen deze constante.
- */
-export const DAAN_LEEFTIJD = "[XX]";
+/** Geboortedatum van Daan. De badge rekent de leeftijd hieruit, in Amsterdamse tijd. */
+export const DAAN_GEBOORTEDATUM = { jaar: 2001, maand: 7, dag: 2 } as const;
+
+export function daanLeeftijd(nu = new Date()): number {
+  const delen = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Amsterdam",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(nu);
+  const getal = (type: string) => Number(delen.find((deel) => deel.type === type)?.value);
+  const jaar = getal("year");
+  const maand = getal("month");
+  const dag = getal("day");
+  let leeftijd = jaar - DAAN_GEBOORTEDATUM.jaar;
+  const verjaardagNogNiet =
+    maand < DAAN_GEBOORTEDATUM.maand ||
+    (maand === DAAN_GEBOORTEDATUM.maand && dag < DAAN_GEBOORTEDATUM.dag);
+  if (verjaardagNogNiet) leeftijd -= 1;
+  return leeftijd;
+}
 
 /**
  * Optioneel boekingsadres. Ingevuld: verzenden opent ook de mailclient.

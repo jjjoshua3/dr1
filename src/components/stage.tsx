@@ -3,7 +3,7 @@ import {
   ACTS,
   BOEKINGS_EMAIL,
   CHAPTERS,
-  DAAN_LEEFTIJD,
+  daanLeeftijd,
   FILTERS,
   TOPICS,
   VIDEOS,
@@ -621,10 +621,10 @@ export function Stage() {
 }
 
 function AgeBadge() {
+  const leeftijd = daanLeeftijd();
   return (
-    <span className="age-badge" data-age={DAAN_LEEFTIJD}>
-      {/* leeftijd aanpassen: DAAN_LEEFTIJD in src/daan.ts */}
-      <span className="age-num">{DAAN_LEEFTIJD}</span>
+    <span className="age-badge" data-age={leeftijd}>
+      <span className="age-num">{leeftijd}</span>
       <span className="age-unit">jaar</span>
     </span>
   );
